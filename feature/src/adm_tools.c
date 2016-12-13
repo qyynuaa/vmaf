@@ -89,6 +89,9 @@ float adm_sum_cube_s(const float *x, int w, int h, int stride, double border_fac
         accum += accum_inner;
     }
 
+    // adding noise floor
+    accum += (bottom - top) * (right - left) / (32.0 * 32.0 * 32.0);
+
     return powf(accum, 1.0f / 3.0f);
 }
 
@@ -318,24 +321,20 @@ void adm_decouple_d(const adm_dwt_band_t_d *ref, const adm_dwt_band_t_d *dis, co
 
 void adm_csf_s(const adm_dwt_band_t_s *src, const adm_dwt_band_t_s *dst, int orig_h, int scale, int w, int h, int src_stride, int dst_stride)
 {
-    const float view_dis = 4;
-    const float a = 0.31;
-    const float b = 0.69;
-    const float c = 0.29;
-
     const float *src_angles[3] = { src->band_h, src->band_v, src->band_d };
     float *dst_angles[3]       = { dst->band_h, dst->band_v, dst->band_d };
-    float p[3]                 = { 1, 1, -1 };
 
     const float *src_ptr;
     float *dst_ptr;
 
-    float f1 = M_PI * orig_h * view_dis / (180 * 1 << (scale + 1));
-    float f2;
-    float factor;
-
     int src_px_stride = src_stride / sizeof(float);
     int dst_px_stride = dst_stride / sizeof(float);
+
+    // for ADM: scales goes from 0 to 3 but in noise floor paper, it goes from
+    // 1 to 4 (from finest scale to coarsest scale).
+    float factor1 = dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale + 1, 1);
+    float factor2 = dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale + 1, 2);
+    float rfactor[3] = {1.0 / factor1, 1.0 / factor1, 1.0 / factor2};
 
     int i, j, theta;
 
@@ -343,12 +342,9 @@ void adm_csf_s(const adm_dwt_band_t_s *src, const adm_dwt_band_t_s *dst, int ori
         src_ptr = src_angles[theta];
         dst_ptr = dst_angles[theta];
 
-        f2     = f1 / (0.15 * p[theta] + 0.85);
-        factor = (a + b * f2) * exp(-c * f2);
-
         for (i = 0; i < h; ++i) {
             for (j = 0; j < w; ++j) {
-                dst_ptr[i * dst_px_stride + j] = factor * src_ptr[i * src_px_stride + j];
+                dst_ptr[i * dst_px_stride + j] = rfactor[theta] * src_ptr[i * src_px_stride + j];
             }
         }
     }
