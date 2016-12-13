@@ -90,7 +90,7 @@ float adm_sum_cube_s(const float *x, int w, int h, int stride, double border_fac
     }
 
     // adding noise floor
-    accum += (bottom - top) * (right - left) / (32.0 * 32.0 * 32.0);
+    accum += (bottom - top) * (right - left) / 32.0;
 
     return powf(accum, 1.0f / 3.0f);
 }
