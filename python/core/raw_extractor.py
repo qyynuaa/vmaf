@@ -29,12 +29,12 @@ class AssetExtractor(RawExtractor):
     TYPE = 'Asset'
     VERSION = '1.0'
 
-    def _open_ref_workfile(self, asset, fifo_mode):
+    def _open_ref_workfile(self, asset, fifo_mode, lock=None):
         # override Executor._open_ref_workfile(self, asset, fifo_mode)
         # do nothing
         pass
 
-    def _open_dis_workfile(self, asset, fifo_mode):
+    def _open_dis_workfile(self, asset, fifo_mode, lock=None):
         # override Executor._open_dis_workfile(self, asset, fifo_mode)
         # do nothing
         pass
@@ -79,7 +79,7 @@ class DisYUVRawVideoExtractor(H5pyMixin, RawExtractor):
         super(DisYUVRawVideoExtractor, self)._assert_args()
         self.assert_h5py_file()
 
-    def _open_ref_workfile(self, asset, fifo_mode):
+    def _open_ref_workfile(self, asset, fifo_mode, lock=None):
         # override Executor._open_ref_workfile(self, asset, fifo_mode)
         # do nothing
         pass

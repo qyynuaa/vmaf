@@ -85,12 +85,13 @@ class NorefFeatureExtractor(FeatureExtractor):
                 pass
             else:
                 if self.fifo_mode:
+                    lock = multiprocessing.Lock()
                     dis_p = multiprocessing.Process(target=self._open_dis_workfile,
-                                                    args=(asset, True))
+                                                    args=(asset, True, lock))
                     dis_p.start()
                     self._wait_for_workfiles(asset)
                 else:
-                    self._open_dis_workfile(asset, fifo_mode=False)
+                    self._open_dis_workfile(asset, False)
 
             self._prepare_log_file(asset)
 

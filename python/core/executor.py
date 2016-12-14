@@ -196,16 +196,17 @@ class Executor(TypeVersionEnabled):
                 pass
             else:
                 if self.fifo_mode:
+                    lock = multiprocessing.Lock()
                     ref_p = multiprocessing.Process(target=self._open_ref_workfile,
-                                                    args=(asset, True))
+                                                    args=(asset, True, lock))
                     dis_p = multiprocessing.Process(target=self._open_dis_workfile,
-                                                    args=(asset, True))
+                                                    args=(asset, True, lock))
                     ref_p.start()
                     dis_p.start()
-                    self._wait_for_workfiles(asset)
+                    # self._wait_for_workfiles(asset)
                 else:
-                    self._open_ref_workfile(asset, fifo_mode=False)
-                    self._open_dis_workfile(asset, fifo_mode=False)
+                    self._open_ref_workfile(asset, False)
+                    self._open_dis_workfile(asset, False)
 
             self._prepare_log_file(asset)
 
@@ -275,7 +276,7 @@ class Executor(TypeVersionEnabled):
 
     # ===== workfile =====
 
-    def _open_ref_workfile(self, asset, fifo_mode):
+    def _open_ref_workfile(self, asset, fifo_mode, lock=None):
         # For now, only works for YUV format -- all need is to copy from ref
         # file to ref workfile
 
@@ -308,7 +309,7 @@ class Executor(TypeVersionEnabled):
             self.logger.info(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd, shell=True)
 
-    def _open_dis_workfile(self, asset, fifo_mode):
+    def _open_dis_workfile(self, asset, fifo_mode, lock=None):
         # For now, only works for YUV format -- all need is to copy from dis
         # file to dis workfile
 
