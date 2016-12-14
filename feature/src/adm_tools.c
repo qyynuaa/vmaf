@@ -90,11 +90,11 @@ float adm_sum_cube_s(const float *x, int w, int h, int stride, double border_fac
     }
 
     // adding noise floor
-    // accum += (bottom - top) * (right - left) / 32.0f;
+    accum += (bottom - top) * (right - left) / 32.0f * 0.5f;
 
-    // return powf(accum, 1.0f / 3.0f);
+    return powf(accum, 1.0f / 3.0f);
 
-    return powf(accum, 1.0f / 3.0f) + powf((bottom - top) * (right - left) / 32.0f, 1.0f / 3.0f);
+    //return powf(accum, 1.0f / 3.0f) + powf((bottom - top) * (right - left) / 32.0f, 1.0f / 3.0f);
 }
 
 double adm_sum_cube_d(const double *x, int w, int h, int stride, double border_factor)
@@ -123,11 +123,11 @@ double adm_sum_cube_d(const double *x, int w, int h, int stride, double border_f
     }
 
     // adding noise floor
-    // accum += (bottom - top) * (right - left) / 32.0;
+    accum += (bottom - top) * (right - left) / 32.0 * 0.5;
 
-    // return pow(accum, 1.0 / 3.0);
+    return pow(accum, 1.0 / 3.0);
 
-    return powf(accum, 1.0 / 3.0) + powf((bottom - top) * (right - left) / 32.0, 1.0 / 3.0);
+    // return powf(accum, 1.0 / 3.0) + powf((bottom - top) * (right - left) / 32.0, 1.0 / 3.0);
 
 }
 
