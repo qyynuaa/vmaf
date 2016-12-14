@@ -91,7 +91,9 @@ class VmafFeatureExtractor(FeatureExtractor):
     # VERSION = '0.2.1' # expose vif num/den of each scale
     # VERSION = '0.2.2'  # adm abs-->fabs, corrected border handling, uniform reading with option of offset for input YUV, updated VIF corner case
     # VERSION = '0.2.2b'  # expose adm_den/num_scalex
-    VERSION = '0.2.3'  # AVX for VMAF convolution; update adm features by folding noise floor into per coef
+
+    # VERSION = '0.2.3'  # AVX for VMAF convolution; update adm features by folding noise floor into per coef
+    VERSION = '0.2.3a'  # try ioannis new idea #1
 
     ATOM_FEATURES = ['vif', 'adm', 'ansnr', 'motion',
                      'vif_num', 'vif_den', 'adm_num', 'adm_den', 'anpsnr',
