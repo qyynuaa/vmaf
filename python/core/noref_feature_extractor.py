@@ -24,18 +24,6 @@ class NorefFeatureExtractor(FeatureExtractor):
         assert os.path.exists(asset.ref_path), \
             "Distorted path {} does not exist.".format(asset.dis_path)
 
-    def _wait_for_workfiles(self, asset):
-        # Override Executor._wait_for_workfiles to skip ref_workfile_path
-        # wait til workfile paths being generated
-        # FIXME: use proper mutex (?)
-        for i in range(10):
-            if os.path.exists(asset.dis_workfile_path):
-                break
-            sleep(0.1)
-        else:
-            raise RuntimeError("dis video workfile path {} is missing.".format(
-                asset.dis_workfile_path))
-
     def _run_on_asset(self, asset):
         # Override Executor._run_on_asset to skip working on ref video
 
@@ -89,7 +77,6 @@ class NorefFeatureExtractor(FeatureExtractor):
                     dis_p = multiprocessing.Process(target=self._open_dis_workfile,
                                                     args=(asset, True, lock))
                     dis_p.start()
-                    self._wait_for_workfiles(asset)
                 else:
                     self._open_dis_workfile(asset, False)
 

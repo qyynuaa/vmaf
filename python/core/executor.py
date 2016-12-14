@@ -111,22 +111,10 @@ class Executor(TypeVersionEnabled):
 
         pass
 
-    def _wait_for_workfiles(self, asset):
-        # wait til workfile paths being generated
-        # FIXME: use proper mutex (?)
-        for i in range(10):
-            if os.path.exists(asset.ref_workfile_path) and \
-                    os.path.exists(asset.dis_workfile_path):
-                break
-            sleep(0.1)
-        else:
-            raise RuntimeError(
-                "ref or dis video workfile path {ref} or {dis} is missing.".
-                    format(ref=asset.ref_workfile_path,
-                           dis=asset.dis_workfile_path)
-            )
+    def _prepare_log_file(self, asset, lock=None):
 
-    def _prepare_log_file(self, asset):
+        if lock:
+            lock.acquire()
 
         log_file_path = self._get_log_file_path(asset)
 
@@ -137,6 +125,9 @@ class Executor(TypeVersionEnabled):
         with open(log_file_path, 'wt') as log_file:
             log_file.write("{type_version_str}\n\n".format(
                 type_version_str=self.get_cozy_type_version_string()))
+
+        if lock:
+            lock.release()
 
     def _assert_paths(self, asset):
         assert os.path.exists(asset.ref_path), \
@@ -201,14 +192,16 @@ class Executor(TypeVersionEnabled):
                                                     args=(asset, True, lock))
                     dis_p = multiprocessing.Process(target=self._open_dis_workfile,
                                                     args=(asset, True, lock))
+                    log_p = multiprocessing.Process(target=self._prepare_log_file,
+                                                    args=(asset, lock))
+
                     ref_p.start()
                     dis_p.start()
-                    # self._wait_for_workfiles(asset)
+                    log_p.start()
                 else:
                     self._open_ref_workfile(asset, False)
                     self._open_dis_workfile(asset, False)
-
-            self._prepare_log_file(asset)
+                    self._prepare_log_file(asset)
 
             self._generate_result(asset)
 
@@ -280,6 +273,9 @@ class Executor(TypeVersionEnabled):
         # For now, only works for YUV format -- all need is to copy from ref
         # file to ref workfile
 
+        if lock is not None:
+            lock.acquire()
+
         # only need to open ref workfile if the path is different from ref path
         assert asset.use_path_as_workpath == False \
                and asset.ref_path != asset.ref_workfile_path
@@ -309,9 +305,22 @@ class Executor(TypeVersionEnabled):
             self.logger.info(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd, shell=True)
 
+        if lock is not None:
+            for i in range(10):
+                if os.path.exists(asset.ref_workfile_path):
+                    lock.release()
+                    break
+                sleep(0.1)
+            else:
+                raise RuntimeError("ref video workfile path {ref} is missing.".
+                                   format(ref=asset.ref_workfile_path))
+
     def _open_dis_workfile(self, asset, fifo_mode, lock=None):
         # For now, only works for YUV format -- all need is to copy from dis
         # file to dis workfile
+
+        if lock is not None:
+            lock.acquire()
 
         # only need to open dis workfile if the path is different from dis path
         assert asset.use_path_as_workpath == False \
@@ -341,6 +350,16 @@ class Executor(TypeVersionEnabled):
         if self.logger:
             self.logger.info(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd, shell=True)
+
+        if lock is not None:
+            for i in range(10):
+                if os.path.exists(asset.dis_workfile_path):
+                    lock.release()
+                    break
+                sleep(0.1)
+            else:
+                raise RuntimeError("dis video workfile path {dis} is missing.".
+                                   format(dis=asset.dis_workfile_path))
 
     @staticmethod
     def _close_ref_workfile(asset):
