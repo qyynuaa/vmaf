@@ -113,10 +113,24 @@ FORCE_INLINE inline float dwt_quant_step(const struct dwt_model_params *params, 
     float r = VIEW_DIST * REF_DISPLAY_HEIGHT * M_PI / 180.0;
 
     // Formula (9), page 1171
-    float temp = log10(pow(2.0,lambda+1)*params->f0*params->g[theta]/r);
+    float temp = log10(pow(2.0, lambda+1) * params->f0 * params->g[theta] /r);
     float Q = 2.0*params->a*pow(10.0,params->k*temp*temp)/dwt_7_9_basis_function_amplitudes[lambda][theta];
 
     return Q;
+}
+
+FORCE_INLINE inline float std_factor(int lambda, int theta)
+{
+
+    const floor view_dist = 3;
+    const float a = 0.31;
+    const float b = 0.69;
+    const float c = 0.29;
+    const float p[3] = {1, 1, -1};
+
+    float f1 = VIEW_DIST * REF_DISPLAY_HEIGHT * M_PI / (180.0 * 1 << (lambda + 1));
+    float f2 = f1 / (0.15 * p[theta] + 0.85);
+    float factor = (a + b * f2) * exp(-c * f2);
 }
 
 #endif /* ADM_TOOLS_H_ */

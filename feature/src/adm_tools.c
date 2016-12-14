@@ -340,8 +340,8 @@ void adm_csf_s(const adm_dwt_band_t_s *src, const adm_dwt_band_t_s *dst, int ori
 
     // for ADM: scales goes from 0 to 3 but in noise floor paper, it goes from
     // 1 to 4 (from finest scale to coarsest scale).
-    float factor1 = dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale + 1, 1);
-    float factor2 = dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale + 1, 2);
+    float factor1 = dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale, 1); // vertical
+    float factor2 = dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale, 2); // diagonal
     float rfactor[3] = {1.0f / factor1, 1.0f / factor1, 1.0f / factor2};
 
     int i, j, theta;
@@ -371,8 +371,8 @@ void adm_csf_d(const adm_dwt_band_t_d *src, const adm_dwt_band_t_d *dst, int ori
 
     // for ADM: scales goes from 0 to 3 but in noise floor paper, it goes from
     // 1 to 4 (from finest scale to coarsest scale).
-    double factor1 = (double)dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale + 1, 1);
-    double factor2 = (double)dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale + 1, 2);
+    double factor1 = (double)dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale, 1); // vertical
+    double factor2 = (double)dwt_quant_step(&dwt_7_9_YCbCr_threshold[0], scale, 2); // diagonal
     double rfactor[3] = {1.0 / factor1, 1.0 / factor1, 1.0 / factor2};
 
     int i, j, theta;
