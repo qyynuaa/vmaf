@@ -94,7 +94,8 @@ class VmafFeatureExtractor(FeatureExtractor):
     # VERSION = '0.2.3'  # AVX for VMAF convolution; update adm features by folding noise floor into per coef
     # VERSION = '0.2.4'  # Fix a bug in adm feature passing scale into dwt_quant_step
     # VERSION = '0.2.4b'  # Modify by adding ADM noise floor outside cube root
-    VERSION = '0.2.4c'  # try Ioannis idea #2
+    # VERSION = '0.2.4c'  # try Ioannis idea #2
+    VERSION = '0.2.4d'  # try Ioannis idea #3
 
     ATOM_FEATURES = ['vif', 'adm', 'ansnr', 'motion',
                      'vif_num', 'vif_den', 'adm_num', 'adm_den', 'anpsnr',
