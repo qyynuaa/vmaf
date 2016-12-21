@@ -29,18 +29,23 @@ class AssetExtractor(RawExtractor):
     TYPE = 'Asset'
     VERSION = '1.0'
 
+    @classmethod
+    def _assert_an_asset(cls, asset):
+        # override Executor._assert_an_asset bypassing ffmpeg check
+        pass
+
     def _open_ref_workfile(self, asset, fifo_mode):
-        # override Executor._open_ref_workfile(self, asset, fifo_mode)
+        # override Executor._open_ref_workfile
         # do nothing
         pass
 
     def _open_dis_workfile(self, asset, fifo_mode):
-        # override Executor._open_dis_workfile(self, asset, fifo_mode)
+        # override Executor._open_dis_workfile
         # do nothing
         pass
 
     def _wait_for_workfiles(self, asset):
-        # override Executor._wait_for_workfiles(self, asset)
+        # override Executor._wait_for_workfiles
         pass
 
     def _generate_result(self, asset):
@@ -75,19 +80,29 @@ class DisYUVRawVideoExtractor(H5pyMixin, RawExtractor):
             assert channels.issubset(set('yuv'))
             return ''.join(channels)
 
+    def run(self, **kwargs):
+        # override Executor.run
+        if 'parallelize' in kwargs:
+            parallelize = kwargs['parallelize']
+        else:
+            parallelize = False
+
+        assert parallelize is False, "DisYUVRawVideoExtractor cannot parallelize."
+
+        super(DisYUVRawVideoExtractor, self).run(**kwargs)
+
     def _assert_args(self):
         super(DisYUVRawVideoExtractor, self)._assert_args()
         self.assert_h5py_file()
 
     def _open_ref_workfile(self, asset, fifo_mode):
-        # override Executor._open_ref_workfile(self, asset, fifo_mode)
+        # override Executor._open_ref_workfile
         # do nothing
         pass
 
     def _wait_for_workfiles(self, asset):
         # Override Executor._wait_for_workfiles to skip ref_workfile_path
         # wait til workfile paths being generated
-        # FIXME: use proper mutex (?)
         for i in range(10):
             if os.path.exists(asset.dis_workfile_path):
                 break

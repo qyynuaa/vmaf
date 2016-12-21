@@ -1,8 +1,23 @@
 # Change Log
 
+## (12/20/2016) [1.1.20]
+
+**New features:**
+- Add STRRED runner.
+
+## (12/19/2016) [1.1.19]
+
+**New features:**
+- Allow specifying crop and pad parameter in dataset files.
+
+## (12/8/2016) [1.1.18]
+
+**Fixed bugs:**
+- Replace pathos with custom function for parallel executor running.
+
 ## (12/8/2016) [1.1.17]
 
-**Fixed bug:**
+**Fixed bugs:**
 - Fix command line run_testing issue. Add command line test cases.
 
 ## (12/5/2016) [1.1.16]
@@ -12,7 +27,7 @@
 
 ## (11/30/2016) [1.1.15]
 
-**Fixed bug:**
+**Fixed bugs:**
 - Fix vmafossexec memory leakage.
 
 ## (11/28/2016) [1.1.14]
@@ -22,7 +37,7 @@
 
 ## (11/18/2016) [1.1.13]
 
-**Fixed bug:**
+**Fixed bugs:**
 - Fix a bug in DatasetReader.to_aggregated_dataset_file.
 
 ## (11/15/2016) [1.1.12]

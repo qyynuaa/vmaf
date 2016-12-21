@@ -1,3 +1,7 @@
+import multiprocessing
+import subprocess
+from time import sleep
+
 __copyright__ = "Copyright 2016, Netflix, Inc."
 __license__ = "Apache, Version 2.0"
 
@@ -186,8 +190,91 @@ def index_and_value_of_min(l):
     '''
     return min(enumerate(l), key=lambda x: x[1])
 
+def parallel_map(func, list_args, processes=None):
+    """
+    Build my own parallelized map function since multiprocessing's Process(),
+    or Pool.map() cannot meet my both needs:
+    1) be able to control the maximum number of processes in parallel
+    2) be able to take in non-picklable objects as arguments
+    """
+
+    # get maximum number of active processes that can be used
+    max_active_procs = processes if processes is not None else multiprocessing.cpu_count()
+
+    # create shared dictionary
+    return_dict = multiprocessing.Manager().dict()
+
+    # define runner function
+    def func_wrapper(idx_args):
+        idx, args = idx_args
+        executor = func(args)
+        return_dict[idx] = executor
+
+    # add idx to args
+    list_idx_args = []
+    for idx, args in enumerate(list_args):
+        list_idx_args.append((idx, args))
+
+    procs = []
+    for idx_args in list_idx_args:
+        proc = multiprocessing.Process(target=func_wrapper, args=(idx_args,))
+        procs.append(proc)
+
+    waiting_procs = set(procs)
+    active_procs = set([])
+
+    # processing
+    while True:
+
+        # check if any procs in active_procs is done; if yes, remove them
+        for p in active_procs.copy():
+            if not p.is_alive():
+                active_procs.remove(p)
+
+        # check if can add a proc to active_procs (add gradually one per loop)
+        if len(active_procs) < max_active_procs and len(waiting_procs) > 0:
+            # move one proc from waiting_procs to active_procs
+            p = waiting_procs.pop()
+            active_procs.add(p)
+            p.start()
+
+        # if both waiting_procs and active_procs are empty, can terminate
+        if len(waiting_procs) == 0 and len(active_procs) == 0:
+            break
+
+        sleep(0.1) # check every 0.1 sec
+
+    # finally, collect results
+    rets = map(lambda idx: return_dict[idx], range(len(list_args)))
+
+    return rets
+
+def check_program_exist(program):
+    '''
+
+    >>> check_program_exist("xxxafasd34df")
+    False
+    >>> check_program_exist("xxxafasd34df f899")
+    False
+    >>> check_program_exist("ls")
+    True
+    >>> check_program_exist("ls -all")
+    True
+    >>> check_program_exist("pwd")
+    True
+
+    '''
+    try:
+        subprocess.call(program.split(), stdout=open(os.devnull, 'wb'))
+        return True
+    except OSError as e:
+        if e.errno == os.errno.ENOENT:
+            return False
+        else:
+            # Something else went wrong while trying to run `wget`
+            raise
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-
 

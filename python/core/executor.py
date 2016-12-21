@@ -1,15 +1,16 @@
-__copyright__ = "Copyright 2016, Netflix, Inc."
-__license__ = "Apache, Version 2.0"
-
 import multiprocessing
 import os
 import subprocess
 from time import sleep
 import hashlib
 
-from tools.misc import make_parent_dirs_if_nonexist, get_dir_without_last_slash
+from tools.misc import make_parent_dirs_if_nonexist, get_dir_without_last_slash, \
+    parallel_map, check_program_exist
 from core.mixin import TypeVersionEnabled
+from config import get_and_assert_ffmpeg
 
+__copyright__ = "Copyright 2016, Netflix, Inc."
+__license__ = "Apache, Version 2.0"
 
 class Executor(TypeVersionEnabled):
     """
@@ -49,6 +50,7 @@ class Executor(TypeVersionEnabled):
         self.optional_dict = optional_dict
         self.optional_dict2 = optional_dict2
 
+        self._assert_class()
         self._assert_args()
         self._assert_assets()
 
@@ -68,7 +70,7 @@ class Executor(TypeVersionEnabled):
 
         return executor_id_
     
-    def run(self):
+    def run(self, **kwargs):
         """
         Do all the computation here.
         :return:
@@ -78,7 +80,37 @@ class Executor(TypeVersionEnabled):
                 "For each asset, if {type} result has not been generated, run "
                 "and generate {type} result...".format(type=self.executor_id))
 
-        self.results = map(self._run_on_asset, self.assets)
+        if 'parallelize' in kwargs:
+            parallelize = kwargs['parallelize']
+        else:
+            parallelize = False
+
+        if parallelize:
+            # create locks for unique assets (uniqueness is identified by str(asset))
+            map_asset_lock = {}
+            locks = []
+            for asset in self.assets:
+                asset_str = str(asset)
+                if asset_str not in map_asset_lock:
+                    map_asset_lock[asset_str] = multiprocessing.Lock()
+                locks.append(map_asset_lock[asset_str])
+
+            # pack key arguments to be used as inputs to map function
+            list_args = []
+            for asset, lock in zip(self.assets, locks):
+                list_args.append(
+                    [asset, lock])
+
+            def _run(asset_lock):
+                asset, lock = asset_lock
+                lock.acquire()
+                result = self._run_on_asset(asset)
+                lock.release()
+                return result
+
+            self.results = parallel_map(_run, list_args)
+        else:
+            self.results = map(self._run_on_asset, self.assets)
 
     def remove_results(self):
         """
@@ -89,31 +121,59 @@ class Executor(TypeVersionEnabled):
         for asset in self.assets:
             self._remove_result(asset)
 
+    @classmethod
+    def _assert_class(cls):
+        pass
+
     def _assert_args(self):
         pass
 
     def _assert_assets(self):
 
-        list_dataset_contentid_assetid = \
-            map(lambda asset: (asset.dataset, asset.content_id, asset.asset_id),
-                self.assets)
-        assert len(list_dataset_contentid_assetid) == \
-               len(set(list_dataset_contentid_assetid)), \
-            "Triplet of dataset, content_id and asset_id must be unique for each asset."
+        for asset in self.assets:
+            self._assert_an_asset(asset)
+
+        # ===============================================
+        # after using locks in run_executors_in_parallel,
+        # no longer need constraint below
+        # ===============================================
+        # list_dataset_contentid_assetid = \
+        #     map(lambda asset: (asset.dataset, asset.content_id, asset.asset_id),
+        #         self.assets)
+        # assert len(list_dataset_contentid_assetid) == \
+        #        len(set(list_dataset_contentid_assetid)), \
+        #     "Triplet of dataset, content_id and asset_id must be unique for each asset."
+
+        pass
+
+    @staticmethod
+    def _need_ffmpeg(asset):
+        return asset.quality_width_height != asset.ref_width_height \
+               or asset.quality_width_height != asset.dis_width_height \
+               or asset.crop_cmd is not None \
+               or asset.pad_cmd is not None
 
     @classmethod
     def _assert_an_asset(cls, asset):
 
-        # # 1) for now, quality width/height has to agree with ref/dis width/height
-        # assert asset.quality_width_height \
-        #        == asset.ref_width_height \
-        #        == asset.dis_width_height
+        # if quality width/height do not to agree with ref/dis width/height,
+        # must rely on ffmpeg for scaling
+        if cls._need_ffmpeg(asset):
+            get_and_assert_ffmpeg()
+
+        # if crop_cmd or pad_cmd is specified, make sure quality_width and
+        # quality_height are EXPLICITLY specified in asset_dict
+        if asset.crop_cmd is not None:
+            assert 'quality_width' in asset.asset_dict and 'quality_height' in asset.asset_dict, \
+                'If crop_cmd is specified, must also EXPLICITLY specify quality_width and quality_height.'
+        if asset.pad_cmd is not None:
+            assert 'quality_width' in asset.asset_dict and 'quality_height' in asset.asset_dict, \
+                'If pad_cmd is specified, must also EXPLICITLY specify quality_width and quality_height.'
 
         pass
 
     def _wait_for_workfiles(self, asset):
         # wait til workfile paths being generated
-        # FIXME: use proper mutex (?)
         for i in range(10):
             if os.path.exists(asset.ref_workfile_path) and \
                     os.path.exists(asset.dis_workfile_path):
@@ -148,9 +208,6 @@ class Executor(TypeVersionEnabled):
         # Wraper around the essential function _generate_result, to
         # do housekeeping work including 1) asserts of asset, 2) skip run if
         # log already exist, 3) creating fifo, 4) delete work file and dir
-
-        # asserts
-        self._assert_an_asset(asset)
 
         if self.result_store:
             result = self.result_store.load(asset, self.executor_id)
@@ -255,12 +312,11 @@ class Executor(TypeVersionEnabled):
 
         return result
 
-    @staticmethod
-    def _set_asset_use_path_as_workpath(asset):
-        # if no rescaling is involved, directly work on ref_path/dis_path,
-        # instead of opening workfiles
-        if asset.quality_width_height == asset.ref_width_height \
-                and asset.quality_width_height == asset.dis_width_height:
+    @classmethod
+    def _set_asset_use_path_as_workpath(cls, asset):
+        # if no rescaling or croping or padding is involved, directly work on
+        # ref_path/dis_path, instead of opening workfiles
+        if not cls._need_ffmpeg(asset):
             asset.use_path_as_workpath = True
 
     @classmethod
@@ -287,21 +343,25 @@ class Executor(TypeVersionEnabled):
         if fifo_mode:
             os.mkfifo(asset.ref_workfile_path)
 
-        width, height = asset.ref_width_height
         quality_width, quality_height = asset.quality_width_height
         yuv_type = asset.yuv_type
         resampling_type = asset.resampling_type
 
-        src_fmt_cmd = '-f rawvideo -pix_fmt {yuv_fmt} -s {width}x{height}'.\
-            format(yuv_fmt=asset.yuv_type, width=width, height=height)
+        width, height = asset.ref_width_height
+        src_fmt_cmd = self._get_src_fmt_cmd(asset, height, width)
 
-        from private.config import FFMPEG_PATH
+        crop_cmd = self._get_crop_cmd(asset)
+        pad_cmd = self._get_pad_cmd(asset)
+
         ffmpeg_cmd = '{ffmpeg} {src_fmt_cmd} -i {src} -an -vsync 0 ' \
-                     '-pix_fmt {yuv_type} -s {width}x{height} -f rawvideo ' \
+                     '-pix_fmt {yuv_type} -vf {crop_cmd}{pad_cmd}scale={width}x{height} -f rawvideo ' \
                      '-sws_flags {resampling_type} -y {dst}'.format(
-            ffmpeg=FFMPEG_PATH, src=asset.ref_path, dst=asset.ref_workfile_path,
+            ffmpeg=get_and_assert_ffmpeg(),
+            src=asset.ref_path, dst=asset.ref_workfile_path,
             width=quality_width, height=quality_height,
             src_fmt_cmd=src_fmt_cmd,
+            crop_cmd=crop_cmd,
+            pad_cmd=pad_cmd,
             yuv_type=yuv_type,
             resampling_type=resampling_type)
         if self.logger:
@@ -320,26 +380,45 @@ class Executor(TypeVersionEnabled):
         if fifo_mode:
             os.mkfifo(asset.dis_workfile_path)
 
-        width, height = asset.dis_width_height
         quality_width, quality_height = asset.quality_width_height
         yuv_type = asset.yuv_type
         resampling_type = asset.resampling_type
 
-        src_fmt_cmd = '-f rawvideo -pix_fmt {yuv_fmt} -s {width}x{height}'.\
-            format(yuv_fmt=asset.yuv_type, width=width, height=height)
+        width, height = asset.dis_width_height
+        src_fmt_cmd = self._get_src_fmt_cmd(asset, height, width)
 
-        from private.config import FFMPEG_PATH
+        crop_cmd = self._get_crop_cmd(asset)
+        pad_cmd = self._get_pad_cmd(asset)
+
         ffmpeg_cmd = '{ffmpeg} {src_fmt_cmd} -i {src} -an -vsync 0 ' \
-                     '-pix_fmt {yuv_type} -s {width}x{height} -f rawvideo ' \
+                     '-pix_fmt {yuv_type} -vf {crop_cmd}{pad_cmd}scale={width}x{height} -f rawvideo ' \
                      '-sws_flags {resampling_type} -y {dst}'.format(
-            ffmpeg=FFMPEG_PATH, src=asset.dis_path, dst=asset.dis_workfile_path,
+            ffmpeg=get_and_assert_ffmpeg(),
+            src=asset.dis_path, dst=asset.dis_workfile_path,
             width=quality_width, height=quality_height,
             src_fmt_cmd=src_fmt_cmd,
+            crop_cmd=crop_cmd,
+            pad_cmd=pad_cmd,
             yuv_type=yuv_type,
             resampling_type=resampling_type)
         if self.logger:
             self.logger.info(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd, shell=True)
+
+    def _get_src_fmt_cmd(self, asset, height, width):
+        src_fmt_cmd = '-f rawvideo -pix_fmt {yuv_fmt} -s {width}x{height}'. \
+            format(yuv_fmt=asset.yuv_type, width=width, height=height)
+        return src_fmt_cmd
+
+    def _get_crop_cmd(self, asset):
+        crop_cmd = "crop={},".format(
+            asset.crop_cmd) if asset.crop_cmd is not None else ""
+        return crop_cmd
+
+    def _get_pad_cmd(self, asset):
+        pad_cmd = "pad={},".format(
+            asset.pad_cmd) if asset.pad_cmd is not None else ""
+        return pad_cmd
 
     @staticmethod
     def _close_ref_workfile(asset):
@@ -396,36 +475,35 @@ def run_executors_in_parallel(executor_class,
                  optional_dict=optional_dict,
                  optional_dict2=optional_dict2)
 
-    def run_executor(args):
-        executor_class, asset, fifo_mode, \
-        delete_workdir, result_store, optional_dict, optional_dict2 = args
-        executor = executor_class([asset], None, fifo_mode,
-                                  delete_workdir, result_store,
-                                  optional_dict, optional_dict2)
-        executor.run()
-        return executor
+    # create locks for unique assets (uniqueness is identified by str(asset))
+    map_asset_lock = {}
+    locks = []
+    for asset in assets:
+        asset_str = str(asset)
+        if asset_str not in map_asset_lock:
+            map_asset_lock[asset_str] = multiprocessing.Lock()
+        locks.append(map_asset_lock[asset_str])
 
     # pack key arguments to be used as inputs to map function
     list_args = []
-    for asset in assets:
+    for asset, lock in zip(assets, locks):
         list_args.append(
-            [executor_class, asset, fifo_mode,
-             delete_workdir, result_store, optional_dict, optional_dict2])
+            [executor_class, asset, fifo_mode, delete_workdir,
+             result_store, optional_dict, optional_dict2, lock])
 
-    # map arguments to func
+    def run_executor(args):
+        executor_class, asset, fifo_mode, delete_workdir, \
+        result_store, optional_dict, optional_dict2, lock = args
+        lock.acquire()
+        executor = executor_class([asset], None, fifo_mode, delete_workdir,
+                                  result_store, optional_dict, optional_dict2)
+        executor.run()
+        lock.release()
+        return executor
+
+    # run
     if parallelize:
-        try:
-            from pathos.pp_map import pp_map
-            executors = pp_map(run_executor, list_args)
-        except ImportError:
-            # fall back
-            msg = "pathos.pp_map cannot be imported for parallel execution, " \
-                  "fall back to sequential map()."
-            if logger:
-                logger.warn(msg)
-            else:
-                print 'Warning: {}'.format(msg)
-            executors = map(run_executor, list_args)
+        executors = parallel_map(run_executor, list_args, processes=None)
     else:
         executors = map(run_executor, list_args)
 
@@ -433,3 +511,4 @@ def run_executors_in_parallel(executor_class,
     results = [executor.results[0] for executor in executors]
 
     return executors, results
+

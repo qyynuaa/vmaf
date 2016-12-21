@@ -343,6 +343,16 @@ class Asset(WorkdirEnabled):
                 s += "_"
             s += "{}".format(self.resampling_type)
 
+        if self.crop_cmd is not None:
+            if s!= "":
+                s += "_"
+            s += "crop{}".format(self.crop_cmd)
+
+        if self.pad_cmd is not None:
+            if s!= "":
+                s += "_"
+            s += "pad{}".format(self.pad_cmd)
+
         return s
 
     def to_string(self):
@@ -508,6 +518,19 @@ class Asset(WorkdirEnabled):
         else:
             self.asset_dict['use_path_as_workpath'] = 0
 
+    @property
+    def crop_cmd(self):
+        if 'crop_cmd' in self.asset_dict:
+            return self.asset_dict['crop_cmd']
+        else:
+            return None
+
+    @property
+    def pad_cmd(self):
+        if 'pad_cmd' in self.asset_dict:
+            return self.asset_dict['pad_cmd']
+        else:
+            return None
 
 class NorefAsset(Asset):
     """
