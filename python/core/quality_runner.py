@@ -252,8 +252,11 @@ class VmafQualityRunner(QualityRunner):
     # VERSION = '0.3.1' # using model nflxall_vmafv3.pkl, VmafFeatureExtractor VERSION 0.2.1, NFLX_dataset with 26 subjects (last 4 outliers removed)
     # DEFAULT_MODEL_FILEPATH = config.ROOT + "/resource/model/nflxall_vmafv3a.pkl" # trained with resource/param/vmaf_v3.py on private/resource/dataset/NFLX_dataset.py (26 subjects)
 
-    VERSION = '0.3.2'  # using model nflxall_vmafv4.pkl, VmafFeatureExtractor VERSION 0.2.2, NFLX_dataset with 26 subjects (last 4 outliers removed)
-    DEFAULT_MODEL_FILEPATH = config.ROOT + "/resource/model/nflxall_vmafv4.pkl"  # trained with resource/param/vmaf_v4.py on private/resource/dataset/NFLX_dataset.py (26 subjects)
+    # VERSION = '0.3.2'  # using model nflxall_vmafv4.pkl, VmafFeatureExtractor VERSION 0.2.2, NFLX_dataset with 26 subjects (last 4 outliers removed)
+    # DEFAULT_MODEL_FILEPATH = config.ROOT + "/resource/model/nflxall_vmafv4.pkl"  # trained with resource/param/vmaf_v4.py on private/resource/dataset/NFLX_dataset.py (26 subjects)
+
+    VERSION = '0.5.1'  # using model nflxall_vmafv5.pkl, VmafFeatureExtractor VERSION 0.2.4b, NFLX_dataset with 26 subjects (last 4 outliers removed)
+    DEFAULT_MODEL_FILEPATH = config.ROOT + "/resource/model/nflxall_vmafv5.pkl"  # trained with resource/param/vmaf_v5.py on private/user/zli/resource/dataset/NFLX_dataset.py (26 subjects)
 
     DEFAULT_FEATURE_DICT = {'VMAF_feature': ['vif', 'adm', 'motion', 'ansnr']} # for backward-compatible with older model only
 
