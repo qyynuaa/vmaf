@@ -108,6 +108,18 @@ static const float dwt_7_9_basis_function_amplitudes[6][4] = {
 };
 
 /*
+ * This table applies to D4 (db2) wavelet, used in ADM algorithm
+ */
+static const float dwt_db2_basis_function_amplitudes[6][4] = {
+	{ 0.699759526418598, 0.699759526418598, 0.699759526418598, 0.699759526418598 },
+	{ 0.406099704011438, 0.464412997879510, 0.531099704011011, 0.464412997879510 },
+	{ 0.217889844605927, 0.263194829806349, 0.317919903803119, 0.263194829806349 },
+	{ 0.112753046377972, 0.139638875394696, 0.172935598175598, 0.139638875394696 },
+	{ 0.057340819948357, 0.071866600042086, 0.090072102321885, 0.071866600042086 },
+	{ 0.028913017381598, 0.036449690259959, 0.045950925927660, 0.036449690259959 }
+};
+
+/*
  * lambda = 0 (finest scale), 1, 2, 3 (coarsest scale);
  * theta = 0 (ll), 1 (lh - vertical), 2 (hh - diagonal), 3(hl - horizontal).
  */
@@ -118,7 +130,9 @@ FORCE_INLINE inline float dwt_quant_step(const struct dwt_model_params *params, 
 
     // Formula (9), page 1171
     float temp = log10(pow(2.0,lambda+1)*params->f0*params->g[theta]/r);
-    float Q = 2.0*params->a*pow(10.0,params->k*temp*temp)/dwt_7_9_basis_function_amplitudes[lambda][theta];
+    
+    // float Q = 2.0*params->a*pow(10.0,params->k*temp*temp)/dwt_7_9_basis_function_amplitudes[lambda][theta];
+	float Q = 2.0*params->a*pow(10.0,params->k*temp*temp)/dwt_db2_basis_function_amplitudes[lambda][theta];
 
     return Q;
 }

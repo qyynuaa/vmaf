@@ -77,15 +77,11 @@ float adm_sum_cube_s(const float *x, int w, int h, int stride, double border_fac
     float val;
     float accum = 0;
 
-    float nf = powf(1.0f / 32.0f, 1.0f / 3.0f);
-
     for (i = top; i < bottom; ++i) {
         float accum_inner = 0;
 
         for (j = left; j < right; ++j) {
             val = fabsf(x[i * px_stride + j]);
-
-            val += nf;
 
             accum_inner += val * val * val;
         }
@@ -93,7 +89,7 @@ float adm_sum_cube_s(const float *x, int w, int h, int stride, double border_fac
         accum += accum_inner;
     }
 
-    return powf(accum, 1.0f / 3.0f);
+    return powf(accum, 1.0f / 3.0f) + powf((bottom - top) * (right - left) / 32.0f, 1.0f / 3.0f);
 }
 
 double adm_sum_cube_d(const double *x, int w, int h, int stride, double border_factor)
@@ -109,15 +105,11 @@ double adm_sum_cube_d(const double *x, int w, int h, int stride, double border_f
     double val;
     double accum = 0;
 
-    double nf = powf(1.0 / 32.0, 1.0 / 3.0);
-
     for (i = top; i < bottom; ++i) {
         double accum_inner = 0;
 
         for (j = left; j < right; ++j) {
             val = fabs(x[i * px_stride + j]);
-
-            val += nf;
 
             accum_inner += val * val * val;
         }
@@ -125,7 +117,7 @@ double adm_sum_cube_d(const double *x, int w, int h, int stride, double border_f
         accum += accum_inner;
     }
 
-    return pow(accum, 1.0 / 3.0);
+    return pow(accum, 1.0 / 3.0) + pow((bottom - top) * (right - left) / 32.0, 1.0 / 3.0);
 }
 
 void adm_decouple_s(const adm_dwt_band_t_s *ref, const adm_dwt_band_t_s *dis, const adm_dwt_band_t_s *r, const adm_dwt_band_t_s *a, int w, int h, int ref_stride, int dis_stride, int r_stride, int a_stride)
