@@ -117,7 +117,7 @@ double adm_sum_cube_d(const double *x, int w, int h, int stride, double border_f
         accum += accum_inner;
     }
 
-    return powf(accum, 1.0 / 3.0) + powf((bottom - top) * (right - left) / 32.0, 1.0 / 3.0);
+    return pow(accum, 1.0 / 3.0) + pow((bottom - top) * (right - left) / 32.0, 1.0 / 3.0);
 }
 
 void adm_decouple_s(const adm_dwt_band_t_s *ref, const adm_dwt_band_t_s *dis, const adm_dwt_band_t_s *r, const adm_dwt_band_t_s *a, int w, int h, int ref_stride, int dis_stride, int r_stride, int a_stride)
