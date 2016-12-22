@@ -25,10 +25,12 @@ model_param_dict = {
     # ==== libsvmnusvr parameters ==== #
 
     # 'gamma': 0.0, # default
-    'gamma': 0.05, #vmaf_v3, vmaf_v4, vmaf_v5
+    # 'gamma': 0.05, # vmaf_v3, vmaf_v4
+    'gamma': 0.03, # vmaf_v5
 
     # 'C': 1.0, # default
-    'C': 4.0, # vmaf_v4, vmaf_v5
+    # 'C': 4.0, # vmaf_v4
+    'C': 3.0, # vmaf_v5
 
     # 'nu': 0.5, # default
     'nu': 0.9, # vmafv4, vmaf_v5

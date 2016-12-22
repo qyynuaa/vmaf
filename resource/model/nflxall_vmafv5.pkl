@@ -13,13 +13,13 @@ F0.0
 aF100.0
 asS'C'
 p7
-F4.0
+F3.0
 sS'nu'
 p8
 F0.9
 sS'gamma'
 p9
-F0.05
+F0.03
 ssS'model_dict'
 p10
 (dp11
