@@ -16,7 +16,7 @@ FFMPEG_PATH="/apps/transcoder/bin/ffmpeg"
 VMAF_PATH="./run_vmaf"
 YUV_FMT="yuv420p"
 FILTER="format=$YUV_FMT,scale=$QUALITY_WIDTH:$QUALITY_HEIGHT"
-OUTPUT_FILE="./workspace/workdir/ffmpeg2vmaf.out"
+OUTPUT_FILE="/mnt/mplwork/working/ffmpeg2vmaf.out"
 FIFO_REF=$OUTPUT_FILE.Ref.yuv
 FIFO_DIS=$OUTPUT_FILE.Dis.yuv
 
