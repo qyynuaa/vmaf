@@ -7,7 +7,9 @@ import numpy as np
 
 import config
 from core.asset import Asset
-from core.quality_runner import VmafQualityRunner
+from core.feature_extractor import FeatureExtractor
+from core.noref_feature_extractor import NorefFeatureExtractor
+from core.quality_runner import VmafQualityRunner, QualityRunner
 from core.quality_runner_extra import VmafQualityRunnerWithLocalExplainer
 from tools.misc import get_file_name_without_extension, get_cmd_option, \
     cmd_option_exists
@@ -60,6 +62,8 @@ def main():
         print_usage()
         return 2
 
+    quality_type = get_cmd_option(sys.argv, 6, len(sys.argv), '--quality-type')
+
     pool_method = get_cmd_option(sys.argv, 6, len(sys.argv), '--pool')
     if not (pool_method is None
             or pool_method in POOL_METHODS):
@@ -82,6 +86,19 @@ def main():
         runner_class = VmafQualityRunner
     else:
         runner_class = VmafQualityRunnerWithLocalExplainer
+
+    if quality_type:
+        try:
+            runner_class = QualityRunner.find_subclass(quality_type)
+        except AssertionError:
+            try:
+                runner_class = FeatureExtractor.find_subclass(quality_type)
+            except AssertionError:
+                try:
+                    runner_class = NorefFeatureExtractor.find_subclass(quality_type)
+                except Exception as e:
+                    print "Error: " + str(e)
+                    return 1
 
     if model_path is None:
         optional_dict = None
