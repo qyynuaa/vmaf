@@ -1,6 +1,6 @@
 from tools.stats import ListStats
 
-__copyright__ = "Copyright 2016, Netflix, Inc."
+__copyright__ = "Copyright 2016-2017, Netflix, Inc."
 __license__ = "Apache, Version 2.0"
 
 import os
@@ -28,7 +28,7 @@ class QualityRunnerTest(unittest.TestCase):
     def test_executor_id(self):
         asset = Asset(dataset="test", content_id=0, asset_id=1,
                       ref_path="dir/refvideo.yuv", dis_path="dir/disvideo.yuv",
-                      asset_dict={})
+                      asset_dict={'width': 720, 'height': 480})
         runner = VmafLegacyQualityRunner([asset], None)
         self.assertEquals(runner.executor_id, 'VMAF_legacy_V1.2')
 

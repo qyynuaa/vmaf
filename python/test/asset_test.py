@@ -1,4 +1,4 @@
-__copyright__ = "Copyright 2016, Netflix, Inc."
+__copyright__ = "Copyright 2016-2017, Netflix, Inc."
 __license__ = "Apache, Version 2.0"
 
 import unittest
@@ -345,11 +345,10 @@ class AssetTest(unittest.TestCase):
             'fps':24, 'start_sec':2, 'end_sec': 3, 'yuv_type':'yuv444p'})
         self.assertEquals(asset.yuv_type, 'yuv444p')
 
-        asset = Asset(dataset="test", content_id=0, asset_id=0,
-                      ref_path="", dis_path="", asset_dict={
-            'fps':24, 'start_sec':2, 'end_sec': 3, 'yuv_type':'yuv444a'})
         with self.assertRaises(AssertionError):
-            print asset.yuv_type
+            asset = Asset(dataset="test", content_id=0, asset_id=0,
+                          ref_path="", dis_path="", asset_dict={
+                'fps':24, 'start_sec':2, 'end_sec': 3, 'yuv_type':'yuv444a'})
 
     def test_resampling_type(self):
         asset = Asset(dataset="test", content_id=0, asset_id=0,
@@ -427,6 +426,49 @@ class AssetTest(unittest.TestCase):
                                   'yuv_type':'yuv422p',})
         self.assertTrue(asset.pad_cmd is None)
         self.assertEquals(str(asset), "test_0_0__720x480_yuv422p_vs__720x480_yuv422p_q_720x320")
+
+    def test_notyuv(self):
+        with self.assertRaises(AssertionError):
+            asset = Asset(dataset="test", content_id=0, asset_id=0,
+                          ref_path="", dis_path="",
+                          asset_dict={
+                              'yuv_type': 'notyuv',
+                              'width': 720, 'height': 480,
+                          })
+
+        with self.assertRaises(AssertionError):
+            asset = Asset(dataset="test", content_id=0, asset_id=0,
+                          ref_path="", dis_path="",
+                          asset_dict={
+                              'yuv_type': 'notyuv',
+                              'ref_width': 720, 'ref_height': 480,
+                          })
+
+        with self.assertRaises(AssertionError):
+            asset = Asset(dataset="test", content_id=0, asset_id=0,
+                          ref_path="", dis_path="",
+                          asset_dict={
+                              'yuv_type': 'notyuv',
+                              'ref_width': 720, 'ref_height': 480,
+                              'dis_width': 720, 'dis_height': 480,
+                          })
+
+        asset = Asset(dataset="test", content_id=0, asset_id=0,
+                      ref_path="refvideo", dis_path="disvideo",
+                      asset_dict={
+                          'yuv_type': 'notyuv',
+                      })
+        self.assertTrue(asset.quality_width_height is None)
+        self.assertEquals(str(asset), "test_0_0_refvideo_notyuv_vs_disvideo_notyuv")
+
+        asset = Asset(dataset="test", content_id=0, asset_id=0,
+                      ref_path="refvideo", dis_path="disvideo",
+                      asset_dict={
+                          'yuv_type': 'notyuv',
+                          'quality_width': 720, 'quality_height': 480,
+                      })
+        self.assertEquals(asset.quality_width_height, (720, 480))
+        self.assertEquals(str(asset), "test_0_0_refvideo_notyuv_vs_disvideo_notyuv_q_720x480")
 
 if __name__ == '__main__':
     unittest.main()

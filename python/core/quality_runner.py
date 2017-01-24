@@ -13,7 +13,7 @@ from core.train_test_model import TrainTestModel
 from core.feature_extractor import SsimFeatureExtractor, MsSsimFeatureExtractor, \
     VmafFeatureExtractor, StrredFeatureExtractor
 
-__copyright__ = "Copyright 2016, Netflix, Inc."
+__copyright__ = "Copyright 2016-2017, Netflix, Inc."
 __license__ = "Apache, Version 2.0"
 
 class QualityRunner(Executor):
@@ -90,7 +90,7 @@ class PsnrQualityRunner(QualityRunner):
         psnr_cmd = "{psnr} {yuv_type} {ref_path} {dis_path} {w} {h} >> {log_file_path}" \
         .format(
             psnr=self.PSNR,
-            yuv_type=asset.yuv_type,
+            yuv_type=self._get_workfile_yuv_type(asset.yuv_type),
             ref_path=asset.ref_workfile_path,
             dis_path=asset.dis_workfile_path,
             w=quality_width,
@@ -462,7 +462,7 @@ class VmafossExecQualityRunner(QualityRunner):
         vmafossexec_cmd = "{exe} {fmt} {w} {h} {ref_path} {dis_path} {model} --log {log_file_path} --log-fmt xml --psnr --ssim --ms-ssim" \
             .format(
             exe=self.VMAFOSSEXEC,
-            fmt=asset.yuv_type,
+            fmt=self._get_workfile_yuv_type(asset.yuv_type),
             w=quality_width,
             h=quality_height,
             ref_path=asset.ref_workfile_path,

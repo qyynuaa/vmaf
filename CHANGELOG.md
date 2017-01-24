@@ -1,5 +1,15 @@
 # Change Log
 
+## (12/20/2016) [1.1.22]
+
+**New features:**
+- Add command line ffmpeg2vmaf, which takes encoded videos as input.
+
+## (12/20/2016) [1.1.21]
+
+**New features:**
+- Allow processing non-YUV input videos.
+
 ## (12/20/2016) [1.1.20]
 
 **New features:**

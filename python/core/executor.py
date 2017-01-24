@@ -3,13 +3,14 @@ import os
 import subprocess
 from time import sleep
 import hashlib
+from core.asset import Asset
 
 from tools.misc import make_parent_dirs_if_nonexist, get_dir_without_last_slash, \
-    parallel_map, check_program_exist
+    parallel_map, check_program_exist, match_any_files
 from core.mixin import TypeVersionEnabled
 from config import get_and_assert_ffmpeg
 
-__copyright__ = "Copyright 2016, Netflix, Inc."
+__copyright__ = "Copyright 2016-2017, Netflix, Inc."
 __license__ = "Apache, Version 2.0"
 
 class Executor(TypeVersionEnabled):
@@ -151,10 +152,15 @@ class Executor(TypeVersionEnabled):
         return asset.quality_width_height != asset.ref_width_height \
                or asset.quality_width_height != asset.dis_width_height \
                or asset.crop_cmd is not None \
-               or asset.pad_cmd is not None
+               or asset.pad_cmd is not None \
+               or asset.yuv_type == 'notyuv'
 
     @classmethod
     def _assert_an_asset(cls, asset):
+
+        # needed by _generate_result, and by _open_ref_workfile or
+        # _open_dis_workfile if called
+        assert asset.quality_width_height is not None
 
         # if quality width/height do not to agree with ref/dis width/height,
         # must rely on ffmpeg for scaling
@@ -199,9 +205,9 @@ class Executor(TypeVersionEnabled):
                 type_version_str=self.get_cozy_type_version_string()))
 
     def _assert_paths(self, asset):
-        assert os.path.exists(asset.ref_path), \
+        assert os.path.exists(asset.ref_path) or match_any_files(asset.ref_path), \
             "Reference path {} does not exist.".format(asset.ref_path)
-        assert os.path.exists(asset.ref_path), \
+        assert os.path.exists(asset.dis_path) or match_any_files(asset.dis_path), \
             "Distorted path {} does not exist.".format(asset.dis_path)
 
     def _run_on_asset(self, asset):
@@ -347,8 +353,14 @@ class Executor(TypeVersionEnabled):
         yuv_type = asset.yuv_type
         resampling_type = asset.resampling_type
 
-        width, height = asset.ref_width_height
-        src_fmt_cmd = self._get_src_fmt_cmd(asset, height, width)
+        if yuv_type != 'notyuv':
+            # in this case, for sure has ref_width_height
+            width, height = asset.ref_width_height
+            src_fmt_cmd = self._get_src_fmt_cmd(asset, height, width)
+        else:
+            src_fmt_cmd = '' # if src is not YUV, don't need
+
+        workfile_yuv_type = self._get_workfile_yuv_type(yuv_type)
 
         crop_cmd = self._get_crop_cmd(asset)
         pad_cmd = self._get_pad_cmd(asset)
@@ -362,11 +374,15 @@ class Executor(TypeVersionEnabled):
             src_fmt_cmd=src_fmt_cmd,
             crop_cmd=crop_cmd,
             pad_cmd=pad_cmd,
-            yuv_type=yuv_type,
+            yuv_type=workfile_yuv_type,
             resampling_type=resampling_type)
         if self.logger:
             self.logger.info(ffmpeg_cmd)
         subprocess.call(ffmpeg_cmd, shell=True)
+
+    def _get_workfile_yuv_type(self, yuv_type):
+        workfile_yuv_type = yuv_type if yuv_type != 'notyuv' else Asset.DEFAULT_YUV_TYPE
+        return workfile_yuv_type
 
     def _open_dis_workfile(self, asset, fifo_mode):
         # For now, only works for YUV format -- all need is to copy from dis
@@ -384,8 +400,14 @@ class Executor(TypeVersionEnabled):
         yuv_type = asset.yuv_type
         resampling_type = asset.resampling_type
 
-        width, height = asset.dis_width_height
-        src_fmt_cmd = self._get_src_fmt_cmd(asset, height, width)
+        if yuv_type != 'notyuv':
+            # in this case, for sure has dis_width_height
+            width, height = asset.dis_width_height
+            src_fmt_cmd = self._get_src_fmt_cmd(asset, height, width)
+        else:
+            src_fmt_cmd = '' # if src is not YUV, don't need
+
+        workfile_yuv_type = self._get_workfile_yuv_type(yuv_type)
 
         crop_cmd = self._get_crop_cmd(asset)
         pad_cmd = self._get_pad_cmd(asset)
@@ -399,7 +421,7 @@ class Executor(TypeVersionEnabled):
             src_fmt_cmd=src_fmt_cmd,
             crop_cmd=crop_cmd,
             pad_cmd=pad_cmd,
-            yuv_type=yuv_type,
+            yuv_type=workfile_yuv_type,
             resampling_type=resampling_type)
         if self.logger:
             self.logger.info(ffmpeg_cmd)
